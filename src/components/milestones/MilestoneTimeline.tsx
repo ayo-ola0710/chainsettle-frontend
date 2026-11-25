@@ -31,23 +31,10 @@ interface Props {
   shipment: Shipment;
   userRole: string;
   onUpdate: () => void;
-  pendingSyncs?: Record<number, PendingMilestoneSync>;
-  onOptimisticCommit?: (
-    milestone: Milestone,
-    patch: OptimisticMilestonePatch,
-    expectedStatuses: MilestoneStatus[],
-  ) => void | Promise<void>;
-  onRollback?: (previousMilestone: Milestone) => void;
+  selectedMilestoneIndex?: number;
 }
 
-export function MilestoneTimeline({
-  shipment,
-  userRole,
-  onUpdate,
-  pendingSyncs,
-  onOptimisticCommit,
-  onRollback,
-}: Props) {
+export function MilestoneTimeline({ shipment, userRole, onUpdate, selectedMilestoneIndex }: Props) {
   const t = useTranslations('milestones');
   const [error, setError] = useState<unknown>(null);
   const errorRef = useRef<HTMLDivElement>(null);
@@ -69,7 +56,8 @@ export function MilestoneTimeline({
           onOptimisticCommit={onOptimisticCommit}
           onRollback={onRollback}
           isLast={i === shipment.milestones.length - 1}
-          onClearError={() => setError(null)}
+          onError={(msg) => setError(msg)}
+          isSelected={selectedMilestoneIndex !== undefined ? i === selectedMilestoneIndex : false}
           onError={(err) => setError(err)}
         />
       ))}
@@ -111,6 +99,7 @@ function MilestoneRow({
   isLast,
   onClearError,
   onError,
+  isSelected = false,
 }: {
   milestone: Milestone;
   shipment: Shipment;
@@ -124,7 +113,8 @@ function MilestoneRow({
   ) => void | Promise<void>;
   onRollback?: (previousMilestone: Milestone) => void;
   isLast: boolean;
-  onClearError: () => void;
+  onError: (msg: string) => void;
+  isSelected?: boolean;
   onError: (err: unknown) => void;
 }) {
   const t = useTranslations('milestones');

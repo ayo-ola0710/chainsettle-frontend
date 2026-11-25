@@ -2,14 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, RefreshCw, Loader2, Printer, XCircle, Copy } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowLeft, RefreshCw, Loader2, Printer, XCircle, Copy } from 'lucide-react';
 import Link from 'next/link';
 import { shipmentsApi } from '@/lib/api/services';
 import { cancelShipment } from '@/lib/stellar/contract';
 import { useAuthStore } from '@/lib/hooks/use-auth-store';
+import { isArchivableStatus, useArchivedShipments } from '@/lib/hooks/use-archived-shipments-store';
 import { MilestoneTimeline } from '@/components/milestones/MilestoneTimeline';
 import { ShipmentMeta } from '@/components/shipments/ShipmentMeta';
 import { ShipmentProgress } from '@/components/shipments/ShipmentProgress';
+import { ShipmentNotes } from '@/components/shipments/ShipmentNotes';
+import { shipmentStatusBadge, timeAgo, deriveUserRole, roleBadge } from '@/lib/utils';
 import { ShipmentComments } from '@/components/shipments/ShipmentComments';
 import { EscrowBalanceCard } from '@/components/shipments/EscrowBalanceCard';
 import { shipmentStatusBadge, deriveUserRole, roleBadge, stroopsToUsdc } from '@/lib/utils';
@@ -45,6 +48,7 @@ function remainingEscrowUsdc(shipment: Shipment): string {
 export default function ShipmentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { address } = useAuthStore();
+  const { isArchived, archive, unarchive } = useArchivedShipments(address);
   const [shipment, setShipment] = useState<Shipment | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -254,6 +258,18 @@ export default function ShipmentDetailPage() {
   const canCancel = isBuyer && isActive && !cancelDisabledReason;
   const refundAmount = remainingEscrowUsdc(shipment);
   const cancelling = cancelStep !== null;
+  const canArchive = isArchivableStatus(shipment.status);
+  const archived = isArchived(shipment.id);
+
+  const handleToggleArchive = () => {
+    if (archived) {
+      unarchive(shipment.id);
+      setToast({ type: 'success', message: 'Shipment restored from archive.' });
+    } else if (canArchive) {
+      archive(shipment.id);
+      setToast({ type: 'success', message: 'Shipment archived locally.' });
+    }
+  };
 
   return (
     <div>
@@ -276,6 +292,11 @@ export default function ShipmentDetailPage() {
             <span className={shipmentStatusBadge(shipment.status)}>
               {shipment.status}
             </span>
+            {archived && (
+              <span className="badge bg-gray-100 text-gray-600">
+                Archived
+              </span>
+            )}
             <span
               className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${role.className}`}
             >
@@ -297,6 +318,25 @@ export default function ShipmentDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {(canArchive || archived) && (
+            <button
+              type="button"
+              onClick={handleToggleArchive}
+              className="btn-secondary text-xs"
+            >
+              {archived ? (
+                <>
+                  <ArchiveRestore className="w-3.5 h-3.5" aria-hidden="true" />
+                  Unarchive
+                </>
+              ) : (
+                <>
+                  <Archive className="w-3.5 h-3.5" aria-hidden="true" />
+                  Archive
+                </>
+              )}
+            </button>
+          )}
           <Link
             href={`/dashboard/shipments/create?from=${encodeURIComponent(shipment.id)}`}
             title="Create a new shipment prefilled with this shipment's parties, amount and milestones"
@@ -358,6 +398,9 @@ export default function ShipmentDetailPage() {
         />
       </div>
 
+      {/* Private Notes Panel */}
+      <div className="mt-5">
+        <ShipmentNotes shipmentId={shipment.id} />
       {/* Discussion & Notes Thread */}
       <div className="mt-5">
         <ShipmentComments

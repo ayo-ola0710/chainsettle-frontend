@@ -8,34 +8,16 @@
  */
 
 import { create } from 'zustand';
+import type { User, SupportedCurrency } from '@/types';
 import type { User } from '@/types';
-import { getTokenExpiry, isExpired } from '@/lib/auth/jwt';
-import {
-  type DateDisplayMode,
-  DEFAULT_DATE_PREFERENCES,
-  getStoredDatePreferences,
-  setStoredDatePreferences,
-  type DatePreferences,
-  type DateDisplayMode,
-} from '@/lib/utils/date-preferences';
-
-export type { DatePreferences, DateDisplayMode };
-export const defaultDatePreferences = DEFAULT_DATE_PREFERENCES;
-import {
-  type DatePreferences,
-  defaultDatePreferences,
-  readStoredDatePreferences,
-  writeStoredDatePreferences,
-} from '@/lib/utils/date-preferences';
-
-export type { DatePreferences, DateDisplayMode };
-export { defaultDatePreferences };
+import { decodeJwtPayload, getTokenExpiry, getTokenRole, isExpired } from '@/lib/auth/jwt';
 
 const DEFAULT_COOKIE_MAX_AGE = 7 * 24 * 60 * 60;
 
 function clearStoredSession() {
   localStorage.removeItem('chainsetttle_token');
   localStorage.removeItem('chainsetttle_address');
+  localStorage.removeItem('chainsetttle_user');
   document.cookie = 'chainsetttle_token=; path=/; max-age=0';
 }
 
@@ -60,6 +42,7 @@ interface AuthState {
   expiresAt: number | null;
   user: User | null;
   displayName: string | null;
+  displayCurrency: SupportedCurrency;
   notificationPreferences: NotificationPreferences;
   datePreferences: DatePreferences;
   isConnected: boolean;
@@ -68,6 +51,7 @@ interface AuthState {
   setAuth: (address: string, token: string, user: User) => void;
   setAddress: (address: string) => void;
   setDisplayName: (displayName: string) => void;
+  setDisplayCurrency: (currency: SupportedCurrency) => void;
   setNotificationPreferences: (preferences: NotificationPreferences) => void;
   setDatePreferences: (preferences: DatePreferences) => void;
   logout: () => void;
@@ -80,6 +64,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   expiresAt: null,
   user: null,
   displayName: null,
+  displayCurrency: 'USD',
   notificationPreferences: defaultNotificationPreferences,
   datePreferences: defaultDatePreferences,
   isConnected: false,
@@ -89,6 +74,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (typeof window !== 'undefined') {
       localStorage.setItem('chainsetttle_token', token);
       localStorage.setItem('chainsetttle_address', address);
+      localStorage.setItem('chainsetttle_user', JSON.stringify(user));
       // Keep the middleware cookie alive exactly as long as the token itself
       const maxAge = expiresAt !== null
         ? Math.max(0, Math.floor((expiresAt - Date.now()) / 1000))
@@ -101,13 +87,16 @@ export const useAuthStore = create<AuthState>((set) => ({
     const storedPreferences = typeof window !== 'undefined'
       ? localStorage.getItem(`chainsetttle_notification_preferences_${address}`)
       : null;
-    const datePreferences = readStoredDatePreferences(address);
+    const storedCurrency = (typeof window !== 'undefined'
+      ? (localStorage.getItem(`chainsetttle_display_currency_${address}`) || localStorage.getItem('chainsetttle_display_currency'))
+      : null) as SupportedCurrency | null;
     set({
       address,
       token,
       expiresAt,
       user,
       displayName,
+      displayCurrency: storedCurrency || 'USD',
       notificationPreferences: storedPreferences
         ? { ...defaultNotificationPreferences, ...JSON.parse(storedPreferences) }
         : defaultNotificationPreferences,
@@ -128,6 +117,17 @@ export const useAuthStore = create<AuthState>((set) => ({
       else localStorage.removeItem(`chainsetttle_display_name_${address}`);
     }
     set({ displayName: value });
+  },
+
+  setDisplayCurrency: (currency) => {
+    const address = useAuthStore.getState().address;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('chainsetttle_display_currency', currency);
+      if (address) {
+        localStorage.setItem(`chainsetttle_display_currency_${address}`, currency);
+      }
+    }
+    set({ displayCurrency: currency });
   },
 
   setNotificationPreferences: (preferences) => {
@@ -157,6 +157,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       expiresAt: null,
       user: null,
       displayName: null,
+      displayCurrency: 'USD',
       notificationPreferences: defaultNotificationPreferences,
       datePreferences: readStoredDatePreferences(null),
       isConnected: false,
@@ -177,11 +178,15 @@ export const useAuthStore = create<AuthState>((set) => ({
           return;
         }
         const storedPreferences = localStorage.getItem(`chainsetttle_notification_preferences_${address}`);
+        const storedCurrency = (localStorage.getItem(`chainsetttle_display_currency_${address}`) ||
+          localStorage.getItem('chainsetttle_display_currency')) as SupportedCurrency | null;
         set({
           token,
           expiresAt,
           address,
+          user: restoredUser,
           displayName: localStorage.getItem(`chainsetttle_display_name_${address}`),
+          displayCurrency: storedCurrency || 'USD',
           notificationPreferences: storedPreferences
             ? { ...defaultNotificationPreferences, ...JSON.parse(storedPreferences) }
             : defaultNotificationPreferences,

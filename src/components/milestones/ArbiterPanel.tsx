@@ -14,12 +14,7 @@ interface ArbiterPanelProps {
   shipment: Shipment;
   disabled?: boolean;
   onUpdate: () => void;
-  onOptimisticCommit?: (
-    milestone: Milestone,
-    patch: OptimisticMilestonePatch,
-    expectedStatuses: MilestoneStatus[],
-  ) => void | Promise<void>;
-  onRollback?: (previousMilestone: Milestone) => void;
+  onError?: (msg: string) => void;
   onError?: (err: unknown) => void;
 }
 
@@ -51,23 +46,11 @@ export function ArbiterPanel({
         milestoneIndex: milestone.milestoneIndex,
         approve,
       });
-      if (onOptimisticCommit) {
-        const patch: OptimisticMilestonePatch = approve
-          ? {
-              status: 'Resolved',
-              confirmedAt: new Date().toISOString(),
-            }
-          : {
-              status: 'Pending',
-              proofHash: null,
-            };
-        const expectedStatuses: MilestoneStatus[] = approve
-          ? ['Resolved', 'Confirmed']
-          : ['Pending'];
-        await onOptimisticCommit(previousMilestone, patch, expectedStatuses);
-      } else {
-        onUpdate();
-      }
+      onUpdate();
+    } catch (err: any) {
+      const msg = err?.message ?? `Failed to ${action} milestone`;
+      if (onError) onError(msg);
+      else alert(msg);
     } catch (err) {
       onRollback?.(previousMilestone);
       if (onError) onError(err);

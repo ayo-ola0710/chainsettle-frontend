@@ -3,6 +3,7 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { shortAddress } from "@/lib/utils";
 
 interface Breadcrumb {
   label: string;
@@ -36,13 +37,25 @@ export function Breadcrumbs() {
       if (segments[3] === "print") breadcrumbs.push({ label: "Print view" });
     }
   } else if (segments[1] === "counterparties") {
-    breadcrumbs.push({
-      label: "Counterparties",
-      href: segments[2] ? "/dashboard/counterparties" : undefined,
-    });
+    breadcrumbs.push({ label: "Counterparties" });
     if (segments[2]) {
-      breadcrumbs.push({ label: segments[2] });
+      let decoded = segments[2];
+      try {
+        decoded = decodeURIComponent(segments[2]);
+      } catch {
+        /* keep raw */
+      }
+      breadcrumbs.push({ label: shortAddress(decoded, 4) });
     }
+  } else if (segments[1] === "admin") {
+    breadcrumbs.push({ label: "Admin" });
+    if (segments[2] === "users") {
+      breadcrumbs.push({ label: "Users" });
+    }
+  } else if (segments[1] === "events") {
+    breadcrumbs.push({ label: "Chain Events" });
+  } else if (segments[1] === "settings") {
+    breadcrumbs.push({ label: "Settings" });
   } else if (segments[1] === "notifications") {
     breadcrumbs.push({ label: "Notifications" });
   } else if (segments[1] === "events") {

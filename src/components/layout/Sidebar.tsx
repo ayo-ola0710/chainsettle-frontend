@@ -13,8 +13,10 @@ import {
   Users,
   X,
   Settings,
+  Users,
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/hooks/use-auth-store';
+import { getTokenRole } from '@/lib/auth/jwt';
 import { notificationsApi } from '@/lib/api/services';
 import { shortAddress } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -28,6 +30,13 @@ const NAV_ITEMS = [
   { href: '/dashboard/events', labelKey: 'chainEvents', icon: Activity },
 ];
 
+const ADMIN_NAV_ITEM = {
+  href: '/dashboard/admin/users',
+  labelKey: 'adminUsers',
+  icon: Users,
+  exact: false,
+};
+
 interface SidebarProps {
   open: boolean;
   onClose: () => void;
@@ -35,7 +44,9 @@ interface SidebarProps {
 
 export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const { address, logout, displayName } = useAuthStore();
+  const { address, user, token, logout, displayName } = useAuthStore();
+  const isAdmin = (user?.role ?? getTokenRole(token)) === 'ADMIN';
+  const navItems = isAdmin ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
   const t = useTranslations('navigation');
   const [unreadCount, setUnreadCount] = useState(0);
   const sidebarRef = useRef<HTMLElement>(null);
@@ -110,7 +121,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">
-        {NAV_ITEMS.map(({ href, labelKey, icon: Icon, exact }) => {
+        {navItems.map(({ href, labelKey, icon: Icon, exact }) => {
           const active = exact ? pathname === href : pathname.startsWith(href);
           const isNotifications = labelKey === 'notifications';
           return (

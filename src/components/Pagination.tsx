@@ -3,20 +3,46 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface PaginationProps {
-  page: number;
+export interface PaginationProps {
+  page?: number;
+  currentPage?: number;
   totalPages: number;
-  onPrev: () => void;
-  onNext: () => void;
+  onPrev?: () => void;
+  onNext?: () => void;
+  onPageChange?: (page: number) => void;
 }
 
-export function Pagination({ page, totalPages, onPrev, onNext }: PaginationProps) {
+export function Pagination({
+  page: propPage,
+  currentPage: propCurrentPage,
+  totalPages,
+  onPrev,
+  onNext,
+  onPageChange,
+}: PaginationProps) {
+  const page = propPage ?? propCurrentPage ?? 1;
+
   if (totalPages <= 1) return null;
+
+  const handlePrev = () => {
+    if (page > 1) {
+      if (onPrev) onPrev();
+      if (onPageChange) onPageChange(page - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (page < totalPages) {
+      if (onNext) onNext();
+      if (onPageChange) onPageChange(page + 1);
+    }
+  };
 
   return (
     <nav className="flex items-center justify-center gap-3 mt-6" aria-label="Pagination">
       <button
-        onClick={onPrev}
+        type="button"
+        onClick={handlePrev}
         disabled={page === 1}
         className={cn(
           'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2',
@@ -35,7 +61,8 @@ export function Pagination({ page, totalPages, onPrev, onNext }: PaginationProps
       </span>
 
       <button
-        onClick={onNext}
+        type="button"
+        onClick={handleNext}
         disabled={page === totalPages}
         className={cn(
           'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2',
