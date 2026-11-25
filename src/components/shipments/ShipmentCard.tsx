@@ -6,10 +6,10 @@ import { ArrowRight, Check, Copy } from 'lucide-react';
 import {
   shipmentStatusBadge,
   stroopsToUsdc,
-  timeAgo,
   shortAddress,
   shipmentProgress,
 } from '@/lib/utils';
+import { FormattedDate } from '@/components/FormattedDate';
 import type { Shipment } from '@/types';
 
 export function ShipmentCard({
@@ -55,7 +55,7 @@ export function ShipmentCard({
               </div>
               <p className="text-xs text-gray-400">
                 Supplier: {shortAddress(shipment.supplierAddress)} ·{' '}
-                {timeAgo(shipment.createdAt)}
+                <FormattedDate date={shipment.createdAt} />
               </p>
             </div>
           </Link>
@@ -63,7 +63,7 @@ export function ShipmentCard({
         <div className="flex items-start gap-2">
           <Link
             href={`/dashboard/shipments/${shipment.id}`}
-            className="text-right"
+            className="text-end"
           >
             <p className="text-sm font-semibold text-gray-900">${totalUsdc}</p>
             <p className="text-xs text-gray-400">${releasedUsdc} released</p>
@@ -96,7 +96,7 @@ export function ShipmentCard({
             }
             /{shipment.milestones.length} milestones done
           </p>
-          <ArrowRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-brand-600 transition-colors" aria-hidden="true" />
+          <ArrowRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-brand-600 transition-colors rtl:rotate-180" aria-hidden="true" />
         </div>
       </Link>
     </div>

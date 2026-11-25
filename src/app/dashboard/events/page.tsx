@@ -8,7 +8,7 @@ import type { ChainEvent, PaginatedResponse } from '@/types';
 import { StellarLink } from '@/components/StellarLink';
 import { Pagination } from '@/components/Pagination';
 import { EmptyState } from '@/components/EmptyState';
-import { timeAgo } from '@/lib/utils';
+import { FormattedDate } from '@/components/FormattedDate';
 import { Activity } from 'lucide-react';
 
 const PAGE_SIZE = 20;
@@ -117,19 +117,19 @@ function EventsPageContent() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                  <th className="px-4 py-3 text-start text-xs font-medium uppercase text-gray-500">
                     {t('columns.event')}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                  <th className="px-4 py-3 text-start text-xs font-medium uppercase text-gray-500">
                     {t('columns.shipment')}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                  <th className="px-4 py-3 text-start text-xs font-medium uppercase text-gray-500">
                     {t('columns.ledger')}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                  <th className="px-4 py-3 text-start text-xs font-medium uppercase text-gray-500">
                     {t('columns.txHash')}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                  <th className="px-4 py-3 text-start text-xs font-medium uppercase text-gray-500">
                     {t('columns.time')}
                   </th>
                 </tr>
@@ -153,7 +153,7 @@ function EventsPageContent() {
                       <StellarLink type="tx" value={event.txHash} />
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500">
-                      {timeAgo(event.createdAt ?? event.timestamp ?? null)}
+                      <FormattedDate date={event.createdAt ?? event.timestamp ?? null} />
                     </td>
                   </tr>
                 ))}

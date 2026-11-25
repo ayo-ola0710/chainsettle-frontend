@@ -10,6 +10,26 @@
 import { create } from 'zustand';
 import type { User } from '@/types';
 import { getTokenExpiry, isExpired } from '@/lib/auth/jwt';
+import {
+  type DateDisplayMode,
+  DEFAULT_DATE_PREFERENCES,
+  getStoredDatePreferences,
+  setStoredDatePreferences,
+  type DatePreferences,
+  type DateDisplayMode,
+} from '@/lib/utils/date-preferences';
+
+export type { DatePreferences, DateDisplayMode };
+export const defaultDatePreferences = DEFAULT_DATE_PREFERENCES;
+import {
+  type DatePreferences,
+  defaultDatePreferences,
+  readStoredDatePreferences,
+  writeStoredDatePreferences,
+} from '@/lib/utils/date-preferences';
+
+export type { DatePreferences, DateDisplayMode };
+export { defaultDatePreferences };
 
 const DEFAULT_COOKIE_MAX_AGE = 7 * 24 * 60 * 60;
 
@@ -41,6 +61,7 @@ interface AuthState {
   user: User | null;
   displayName: string | null;
   notificationPreferences: NotificationPreferences;
+  datePreferences: DatePreferences;
   isConnected: boolean;
 
   // Actions
@@ -48,6 +69,7 @@ interface AuthState {
   setAddress: (address: string) => void;
   setDisplayName: (displayName: string) => void;
   setNotificationPreferences: (preferences: NotificationPreferences) => void;
+  setDatePreferences: (preferences: DatePreferences) => void;
   logout: () => void;
   rehydrate: () => void;
 }
@@ -59,6 +81,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   displayName: null,
   notificationPreferences: defaultNotificationPreferences,
+  datePreferences: defaultDatePreferences,
   isConnected: false,
 
   setAuth: (address, token, user) => {
@@ -78,6 +101,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     const storedPreferences = typeof window !== 'undefined'
       ? localStorage.getItem(`chainsetttle_notification_preferences_${address}`)
       : null;
+    const datePreferences = readStoredDatePreferences(address);
     set({
       address,
       token,
@@ -87,6 +111,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       notificationPreferences: storedPreferences
         ? { ...defaultNotificationPreferences, ...JSON.parse(storedPreferences) }
         : defaultNotificationPreferences,
+      datePreferences,
       isConnected: true,
     });
   },
@@ -116,6 +141,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ notificationPreferences: preferences });
   },
 
+  setDatePreferences: (preferences) => {
+    const address = useAuthStore.getState().address;
+    writeStoredDatePreferences(preferences, address);
+    set({ datePreferences: preferences });
+  },
+
   logout: () => {
     if (typeof window !== 'undefined') {
       clearStoredSession();
@@ -127,6 +158,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       user: null,
       displayName: null,
       notificationPreferences: defaultNotificationPreferences,
+      datePreferences: readStoredDatePreferences(null),
       isConnected: false,
     });
   },
@@ -141,6 +173,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         // rendering a "connected" UI whose API calls will all 401
         if (isExpired(expiresAt)) {
           clearStoredSession();
+          set({ datePreferences: readStoredDatePreferences(null) });
           return;
         }
         const storedPreferences = localStorage.getItem(`chainsetttle_notification_preferences_${address}`);
@@ -152,8 +185,11 @@ export const useAuthStore = create<AuthState>((set) => ({
           notificationPreferences: storedPreferences
             ? { ...defaultNotificationPreferences, ...JSON.parse(storedPreferences) }
             : defaultNotificationPreferences,
+          datePreferences: readStoredDatePreferences(address),
           isConnected: true,
         });
+      } else {
+        set({ datePreferences: readStoredDatePreferences(null) });
       }
     }
   },

@@ -6,16 +6,32 @@ import { resolveDispute } from '@/lib/stellar/contract';
 import { useAuthStore } from '@/lib/hooks/use-auth-store';
 import { stroopsToUsdc, proofHashHref } from '@/lib/utils';
 import { parseContractError } from '@/lib/stellar/errors';
-import type { Shipment, Milestone } from '@/types';
+import type { OptimisticMilestonePatch } from '@/lib/milestones/optimistic';
+import type { Shipment, Milestone, MilestoneStatus } from '@/types';
 
 interface ArbiterPanelProps {
   milestone: Milestone;
   shipment: Shipment;
+  disabled?: boolean;
   onUpdate: () => void;
+  onOptimisticCommit?: (
+    milestone: Milestone,
+    patch: OptimisticMilestonePatch,
+    expectedStatuses: MilestoneStatus[],
+  ) => void | Promise<void>;
+  onRollback?: (previousMilestone: Milestone) => void;
   onError?: (err: unknown) => void;
 }
 
-export function ArbiterPanel({ milestone, shipment, onUpdate, onError }: ArbiterPanelProps) {
+export function ArbiterPanel({
+  milestone,
+  shipment,
+  disabled = false,
+  onUpdate,
+  onOptimisticCommit,
+  onRollback,
+  onError,
+}: ArbiterPanelProps) {
   const { address } = useAuthStore();
   const [loading, setLoading] = useState<'approve' | 'reject' | null>(null);
   const [confirmAction, setConfirmAction] = useState<'approve' | 'reject' | null>(null);
@@ -25,6 +41,7 @@ export function ArbiterPanel({ milestone, shipment, onUpdate, onError }: Arbiter
 
   const handle = async (approve: boolean) => {
     const action = approve ? 'approve' : 'reject';
+    const previousMilestone = milestone;
 
     setLoading(action);
     try {
@@ -34,8 +51,25 @@ export function ArbiterPanel({ milestone, shipment, onUpdate, onError }: Arbiter
         milestoneIndex: milestone.milestoneIndex,
         approve,
       });
-      onUpdate();
+      if (onOptimisticCommit) {
+        const patch: OptimisticMilestonePatch = approve
+          ? {
+              status: 'Resolved',
+              confirmedAt: new Date().toISOString(),
+            }
+          : {
+              status: 'Pending',
+              proofHash: null,
+            };
+        const expectedStatuses: MilestoneStatus[] = approve
+          ? ['Resolved', 'Confirmed']
+          : ['Pending'];
+        await onOptimisticCommit(previousMilestone, patch, expectedStatuses);
+      } else {
+        onUpdate();
+      }
     } catch (err) {
+      onRollback?.(previousMilestone);
       if (onError) onError(err);
       else alert(parseContractError(err).message);
     } finally {
@@ -87,7 +121,7 @@ export function ArbiterPanel({ milestone, shipment, onUpdate, onError }: Arbiter
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setConfirmAction('approve')}
-            disabled={loading !== null}
+            disabled={disabled || loading !== null}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
             aria-label="Approve this milestone and release funds"
           >
@@ -97,7 +131,7 @@ export function ArbiterPanel({ milestone, shipment, onUpdate, onError }: Arbiter
 
           <button
             onClick={() => setConfirmAction('reject')}
-            disabled={loading !== null}
+            disabled={disabled || loading !== null}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
             aria-label="Reject this milestone and reset to pending"
           >

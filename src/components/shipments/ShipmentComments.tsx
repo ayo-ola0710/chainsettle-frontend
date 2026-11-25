@@ -14,10 +14,9 @@ import { usePolling } from '@/lib/hooks/use-polling';
 import {
   deriveUserRole,
   roleBadge,
-  timeAgo,
-  formatDate,
   cn,
 } from '@/lib/utils';
+import { FormattedDate } from '@/components/FormattedDate';
 import { StellarLink } from '@/components/StellarLink';
 import type { Shipment, Comment } from '@/types';
 
@@ -191,7 +190,7 @@ export function ShipmentComments({
           <button
             type="button"
             onClick={() => fetchComments(false)}
-            className="font-medium underline hover:text-red-800 ml-2"
+            className="font-medium underline hover:text-red-800 ms-2"
           >
             Retry
           </button>
@@ -236,7 +235,7 @@ export function ShipmentComments({
       ) : (
         /* Comments list */
         <div
-          className="space-y-3 mb-5 max-h-[480px] overflow-y-auto pr-1"
+          className="space-y-3 mb-5 max-h-[480px] overflow-y-auto pe-1"
           role="log"
           aria-label="Shipment comments"
           aria-live="polite"
@@ -284,12 +283,10 @@ export function ShipmentComments({
                     )}
                   </div>
 
-                  <span
-                    className="text-[11px] text-gray-400 whitespace-nowrap ml-auto"
-                    title={formatDate(comment.createdAt)}
-                  >
-                    {timeAgo(comment.createdAt)}
-                  </span>
+                  <FormattedDate
+                    date={comment.createdAt}
+                    className="text-[11px] text-gray-400 whitespace-nowrap ms-auto"
+                  />
                 </div>
 
                 {/* Plain text content with line breaks preserved safely (no HTML injection) */}
