@@ -119,18 +119,29 @@ export interface CreateShipmentInput {
 }
 
 // Comments
+export type MentionRole = 'buyer' | 'supplier' | 'logistics' | 'arbiter';
+
 export interface Comment {
   id: string;
   shipmentId: string;
   authorAddress: string;
   authorRole?: string;
   content: string;
+  mentions?: MentionRole[];
+  edited?: boolean;
+  editedAt?: string | null;
   createdAt: string;
   updatedAt?: string;
 }
 
 export interface CreateCommentInput {
   content: string;
+  mentions?: MentionRole[];
+}
+
+export interface UpdateCommentInput {
+  content: string;
+  mentions?: MentionRole[];
 }
 
 // API response envelope from the backend

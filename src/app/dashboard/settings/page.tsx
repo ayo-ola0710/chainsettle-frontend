@@ -13,6 +13,7 @@ import { ApproximateFiat } from '@/components/ui/ApproximateFiat';
 import { resetTour } from '@/components/tour/TourGuide';
 import type { SupportedCurrency } from '@/types';
 import { TemplateManager } from '@/components/templates/TemplateManager';
+import { AddressBookManager } from '@/components/AddressBookManager';
 
 type PermissionState = 'default' | 'granted' | 'denied' | 'unsupported';
 
@@ -275,6 +276,7 @@ export default function SettingsPage() {
       </section>
 
       <TemplateManager owner={address} />
+      <AddressBookManager owner={address} />
     </div>
   );
 }

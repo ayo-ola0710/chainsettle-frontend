@@ -16,14 +16,21 @@ export function ShipmentCard({
   shipment,
   selected,
   onSelect,
+  archived = false,
+  onArchive,
+  onUnarchive,
 }: {
   shipment: Shipment;
   selected?: boolean;
   onSelect?: (selected: boolean) => void;
+  archived?: boolean;
+  onArchive?: (id: string) => void;
+  onUnarchive?: (id: string) => void;
 }) {
   const progress = shipmentProgress(shipment.milestones);
   const totalUsdc = stroopsToUsdc(shipment.totalAmount);
   const releasedUsdc = stroopsToUsdc(shipment.releasedAmount);
+  const canArchive = isArchivableStatus(shipment.status);
 
   return (
     <Link
@@ -76,6 +83,11 @@ export function ShipmentCard({
                 <span className={shipmentStatusBadge(shipment.status)}>
                   {shipment.status}
                 </span>
+                {archived && (
+                  <span className="badge bg-gray-100 text-gray-600">
+                    Archived
+                  </span>
+                )}
               </div>
               <p className="text-xs text-gray-400">
                 Supplier: {shortAddress(shipment.supplierAddress)} ·{' '}
@@ -110,6 +122,28 @@ export function ShipmentCard({
           >
             <Copy className="w-3.5 h-3.5" aria-hidden="true" />
           </Link>
+          {canArchive && !archived && onArchive && (
+            <button
+              type="button"
+              onClick={() => onArchive(shipment.id)}
+              aria-label={`Archive shipment ${shipment.id}`}
+              title="Archive shipment"
+              className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+            >
+              <Archive className="w-3.5 h-3.5" aria-hidden="true" />
+            </button>
+          )}
+          {archived && onUnarchive && (
+            <button
+              type="button"
+              onClick={() => onUnarchive(shipment.id)}
+              aria-label={`Unarchive shipment ${shipment.id}`}
+              title="Unarchive shipment"
+              className="p-1.5 text-gray-400 hover:text-brand-600 rounded-lg hover:bg-brand-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+            >
+              <ArchiveRestore className="w-3.5 h-3.5" aria-hidden="true" />
+            </button>
+          )}
         </div>
       </div>
 

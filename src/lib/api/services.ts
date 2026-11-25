@@ -13,9 +13,12 @@ import type {
   Milestone,
   Notification,
   User,
+  UserRole,
   ChainEvent,
   CreateShipmentInput,
   Comment,
+  CreateCommentInput,
+  UpdateCommentInput,
 } from '@/types';
 
 // ----------------------------------------------------------------
@@ -179,16 +182,87 @@ export const commentsApi = {
     return (data as any)?.data?.data ?? [];
   },
 
-  /** Create a comment on a shipment */
+  /** Create a comment on a shipment (optionally including @role mentions) */
   create: async (
     shipmentId: string,
-    body: string | { content: string },
+    body: string | CreateCommentInput,
   ): Promise<Comment> => {
-    const payload = typeof body === 'string' ? { content: body } : body;
+    const payload: CreateCommentInput =
+      typeof body === 'string'
+        ? { content: body }
+        : body.mentions && body.mentions.length > 0
+          ? { content: body.content, mentions: body.mentions }
+          : { content: body.content };
     const { data } = await apiClient.post<ApiResponse<Comment> | Comment>(
       `/shipments/${shipmentId}/comments`,
       payload,
     );
     return (data as ApiResponse<Comment>).data ?? (data as Comment);
+  },
+
+  /** Update an existing comment authored by the current user */
+  update: async (
+    shipmentId: string,
+    commentId: string,
+    body: string | UpdateCommentInput,
+  ): Promise<Comment> => {
+    const payload: UpdateCommentInput =
+      typeof body === 'string'
+        ? { content: body }
+        : body.mentions && body.mentions.length > 0
+          ? { content: body.content, mentions: body.mentions }
+          : { content: body.content };
+    const { data } = await apiClient.patch<ApiResponse<Comment> | Comment>(
+      `/shipments/${shipmentId}/comments/${encodeURIComponent(commentId)}`,
+      payload,
+    );
+    return (data as ApiResponse<Comment>).data ?? (data as Comment);
+  },
+
+  /** Delete an existing comment authored by the current user */
+  delete: async (shipmentId: string, commentId: string): Promise<void> => {
+    await apiClient.delete(
+      `/shipments/${shipmentId}/comments/${encodeURIComponent(commentId)}`,
+    );
+  },
+};
+
+// ----------------------------------------------------------------
+// Admin Users
+// ----------------------------------------------------------------
+
+export const adminApi = {
+  /** List all users with optional search and pagination (ADMIN only) */
+  listUsers: async (params?: {
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<User>> => {
+    const { data } = await apiClient.get<
+      ApiResponse<PaginatedResponse<User> | User[]> | PaginatedResponse<User>
+    >('/admin/users', { params });
+    const inner =
+      data && typeof data === 'object' && 'success' in data && 'data' in data
+        ? (data as ApiResponse<PaginatedResponse<User> | User[]>).data
+        : (data as PaginatedResponse<User> | User[]);
+    if (Array.isArray(inner)) {
+      return {
+        data: inner,
+        page: params?.page ?? 1,
+        limit: params?.limit ?? inner.length,
+        total: inner.length,
+        totalPages: 1,
+      };
+    }
+    return inner;
+  },
+
+  /** Update a user's platform role (ADMIN only) */
+  updateUserRole: async (userId: string, role: UserRole): Promise<User> => {
+    const { data } = await apiClient.patch<ApiResponse<User> | User>(
+      `/admin/users/${encodeURIComponent(userId)}/role`,
+      { role },
+    );
+    return (data as ApiResponse<User>).data ?? (data as User);
   },
 };
